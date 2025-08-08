@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+ï»¿# -*- coding: utf-8 -*-
 import os, json, time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, request, jsonify, send_from_directory
@@ -16,7 +16,7 @@ executor = ThreadPoolExecutor(max_workers=32)
 redis_conn = redis.from_url(REDIS_URL)
 job_queue = Queue('resets', connection=redis_conn)
 
-# Token-Prüfung deaktiviert für lokalen Betrieb
+# Token-PrÃ¼fung deaktiviert fÃ¼r lokalen Betrieb
 # def require_token(f):
 #     from functools import wraps
 #     @wraps(f)

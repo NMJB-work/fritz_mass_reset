@@ -1,7 +1,6 @@
-flask
+﻿flask
 redis
 rq
 selenium
 fritzconnection
 requests
-flask-cors

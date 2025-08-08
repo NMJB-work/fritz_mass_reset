@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
+ï»¿# -*- coding: utf-8 -*-
 import os, json, time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
 from functools import wraps
 from settings import API_TOKEN, DATA_DIR, SELECTOR_PROFILES_FILE, USE_TLS, TLS_CERT, TLS_KEY, REDIS_URL
 from resetters import TR064Resetter, RemoteSeleniumResetter, profiles
@@ -10,13 +9,12 @@ import redis
 from rq import Queue
 
 app = Flask(__name__, static_folder='../frontend/build', static_url_path='/')
-CORS(app)
 executor = ThreadPoolExecutor(max_workers=32)
 
 redis_conn = redis.from_url(REDIS_URL)
 job_queue = Queue('resets', connection=redis_conn)
 
-# Token-Prüfung deaktiviert für lokalen Betrieb
+# Token-PrÃ¼fung deaktiviert fÃ¼r lokalen Betrieb
 # def require_token(f):
 #     from functools import wraps
 #     @wraps(f)

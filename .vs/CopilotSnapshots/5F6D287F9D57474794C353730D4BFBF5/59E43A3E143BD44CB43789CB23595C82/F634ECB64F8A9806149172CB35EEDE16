@@ -1,9 +1,9 @@
-import json, os, time, traceback
+ï»¿import json, os, time, traceback
 from urllib.parse import urljoin
 from fritzconnection import FritzConnection
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-# Aktueller Import für Selenium Capabilities
+# Aktueller Import fÃ¼r Selenium Capabilities
 from selenium.webdriver.chrome.options import Options
 from settings import SELENIUM_URL, SELECTOR_PROFILES_FILE
 
@@ -56,7 +56,7 @@ class RemoteSeleniumResetter:
     def __init__(self, address, password=None, headless=True, selenium_url=None, model=None, timeout=30):
         self.address=address; self.password=password; self.headless=headless; self.selenium_url=selenium_url or SELENIUM_URL; self.model=model; self.timeout=timeout
     def _make_driver(self):
-        # Aktuelle Methode für Remote WebDriver mit Chrome
+        # Aktuelle Methode fÃ¼r Remote WebDriver mit Chrome
         options = Options()
         if self.headless:
             options.add_argument('--headless')
