@@ -1,11 +1,94 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Fritz Mass Reset</title>
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Fritz Mass Reset</title>
+        <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet">
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+                font-family: 'Roboto', Arial, sans-serif;
+                background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            #root {
+                background: #fff;
+                box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+                border-radius: 16px;
+                padding: 40px 32px;
+                min-width: 340px;
+                min-height: 240px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+            h1 {
+                font-size: 2rem;
+                font-weight: 700;
+                color: #2d3a4b;
+                margin-bottom: 16px;
+                text-align: center;
+            }
+            p {
+                color: #4a5a6a;
+                text-align: center;
+                margin-bottom: 28px;
+            }
+            .button-group {
+                display: flex;
+                flex-direction: column;
+                gap: 18px;
+                width: 100%;
+            }
+            button {
+                background: #4f8cff;
+                color: #fff;
+                border: none;
+                border-radius: 8px;
+                padding: 12px 32px;
+                font-size: 1rem;
+                font-weight: 700;
+                cursor: pointer;
+                transition: background 0.2s, transform 0.1s;
+                box-shadow: 0 2px 8px rgba(79,140,255,0.08);
+                width: 100%;
+                max-width: 240px;
+                margin: 0 auto;
+            }
+            button:hover, button:focus {
+                background: #2563eb;
+                outline: none;
+                transform: translateY(-2px) scale(1.03);
+            }
+            .info {
+                font-size: 0.95rem;
+                color: #6b7b8c;
+                margin-top: 18px;
+                text-align: center;
+                background: #f5f8fa;
+                border-radius: 8px;
+                padding: 10px 16px;
+                width: 100%;
+                max-width: 260px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="root">
+            <h1>Fritz Mass Reset</h1>
+            <p>Welcome! Use this tool to reset your Fritz devices quickly and easily.</p>
+            <div class="button-group">
+                <button>Start Reset</button>
+                <button style="background:#e0eafc; color:#2563eb;">Help</button>
+            </div>
+            <div class="info">
+                Need assistance? Click "Help" or contact support.
+            </div>
+        </div>
+    </body>
 </html>
