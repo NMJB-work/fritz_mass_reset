@@ -3,14 +3,14 @@
 This archive contains a Dockerized backend, frontend, Selenium container, and Redis queue for managing mass FRITZ!Box resets.
 
 ## Quick start
-1. Install git:  
+1. Install git, curl and npm:  
    Ubuntu/Debian
    ```bash
-   sudo apt update && sudo apt upgrade -y && sudo apt install git && sudo apt install curl
+   sudo apt update && sudo apt upgrade -y && sudo apt install git curl npm
    ```
    RPM-based distributions, such as RHEL or CentOS:
    ```bash
-   sudo dnf update -y && sudo dnf upgrade -y && sudo dnf install git && sudo apt install curl
+   sudo dnf update -y && sudo dnf upgrade -y && sudo dnf install git curl npm
    ```
 2. Install docker and docker compose:  
    Docker: https://docs.docker.com/engine/install/  
