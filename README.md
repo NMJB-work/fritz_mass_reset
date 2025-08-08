@@ -3,12 +3,16 @@
 This archive contains a Dockerized backend, frontend, Selenium container, and Redis queue for managing mass FRITZ!Box resets.
 
 ## Quick start
-1. Edit `docker-compose.yml` and set a strong `API_TOKEN` in the backend and frontend sections.
-2. Build & run:
+1. Clone this Repo 
+   ```bash
+   git clone https://github.com/NMJB-work/fritz_mass_reset.git && cd fritz_mass_reset
+   ```
+2. Edit `docker-compose.yml` and set a strong `API_TOKEN` in the backend and frontend sections.
+3. Build & run:
    ```bash
    docker compose up --build
    ```
-3. Start a worker to process queued jobs (in another terminal):
+4. Start a worker to process queued jobs (in another terminal):
    ```bash
    docker compose exec backend python worker.py
    ```
