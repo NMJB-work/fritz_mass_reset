@@ -1,0 +1,138 @@
+import os, json, time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from flask import Flask, request, jsonify, send_from_directory
+from functools import wraps
+from settings import API_TOKEN, DATA_DIR, SELECTOR_PROFILES_FILE, USE_TLS, TLS_CERT, TLS_KEY, REDIS_URL
+from resetters import TR064Resetter, RemoteSeleniumResetter, profiles
+import redis
+from rq import Queue
+
+app = Flask(__name__, static_folder='../frontend/build', static_url_path='/')
+executor = ThreadPoolExecutor(max_workers=32)
+
+redis_conn = redis.from_url(REDIS_URL)
+job_queue = Queue('resets', connection=redis_conn)
+
+def require_token(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.headers.get('Authorization','')
+        if not auth.startswith('Bearer '):
+            return jsonify({'error':'Missing Authorization header'}),401
+        token = auth.split(None,1)[1]
+        if token != API_TOKEN:
+            return jsonify({'error':'Invalid token'}),403
+        return f(*args, **kwargs)
+    return decorated
+
+def worker_reset_job(payload):
+    # payload contains targets, method, username, password, model
+    results={}
+    for ip in payload.get('targets',[]):
+        method = payload.get('method','auto')
+        username = payload.get('username')
+        password = payload.get('password')
+        model = payload.get('model')
+        if method=='tr064':
+            ok,msg = TR064Resetter(ip, username, password).reset()
+        elif method=='selenium':
+            ok,msg = RemoteSeleniumResetter(ip, password, model=model).reset()
+        else:
+            ok,msg = TR064Resetter(ip, username, password).reset()
+            if not ok:
+                ok2,msg2 = RemoteSeleniumResetter(ip, password, model=model).reset(); ok=ok2; msg=msg2
+        results[ip]={'ok':bool(ok),'message':msg}
+    return results
+
+@app.route('/api/reset', methods=['POST'])
+@require_token
+def api_reset():
+    data = request.get_json(force=True)
+    use_queue = data.get('use_queue', True)
+    if use_queue:
+        job = job_queue.enqueue(worker_reset_job, data)
+        return jsonify({'enqueued': True, 'job_id': job.get_id()})
+    # immediate mode
+    targets = data.get('targets') or []
+    results={}
+    def worker(ip):
+        method = data.get('method','auto')
+        username = data.get('username')
+        password = data.get('password')
+        model = data.get('model')
+        if method=='tr064':
+            return TR064Resetter(ip, username, password).reset()
+        if method=='selenium':
+            return RemoteSeleniumResetter(ip, password, model=model).reset()
+        ok,msg = TR064Resetter(ip, username, password).reset()
+        if ok:
+            return True, 'TR-064: '+msg
+        ok2,msg2 = RemoteSeleniumResetter(ip, password, model=model).reset()
+        if ok2:
+            return True, 'Selenium: '+msg2
+        return False, f'Both methods failed. TR-064: {msg}; Selenium: {msg2}'
+    futures = {executor.submit(worker, ip): ip for ip in targets}
+    for fut in as_completed(futures):
+        ip = futures[fut]
+        try:
+            ok,msg = fut.result()
+        except Exception as e:
+            ok=False; msg=str(e)
+        results[ip]={'ok':bool(ok),'message':msg}
+    return jsonify({'results':results})
+
+@app.route('/api/discover', methods=['POST'])
+@require_token
+def api_discover():
+    from ipaddress import ip_network
+    import requests
+    data = request.get_json(force=True)
+    cidrs = data.get('cidrs', [])
+    timeout = float(data.get('timeout',0.6))
+    ips=[]
+    for c in cidrs:
+        try:
+            nw = ip_network(c)
+            for ip in nw.hosts(): ips.append(str(ip))
+        except Exception: continue
+    results={}
+    def probe(ip):
+        info={'alive':False}
+        try:
+            r = requests.get(f'http://{ip}/', timeout=timeout)
+            info['alive']=True; info['http_ok']=True; info['server_hint']=r.headers.get('server'); info['is_fritz']='fritz' in (r.text or '').lower()
+        except Exception:
+            pass
+        return ip, info
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    with ThreadPoolExecutor(max_workers=32) as ex:
+        futures={ex.submit(probe, ip): ip for ip in ips}
+        for fut in as_completed(futures):
+            ip = futures[fut]
+            try: ip, info = fut.result()
+            except Exception: info={'alive':False}
+            results[ip]=info
+    alive = {ip: r for ip,r in results.items() if r.get('alive')}
+    return jsonify({'all':results,'alive':alive})
+
+@app.route('/api/profiles', methods=['GET','POST'])
+@require_token
+def api_profiles():
+    if request.method=='GET':
+        return jsonify(profiles.profiles)
+    data = request.get_json(force=True)
+    model = data.get('model'); profile = data.get('profile')
+    if not model or not profile:
+        return jsonify({'error':'provide model and profile'}),400
+    profiles.set(model, profile); return jsonify({'ok':True})
+
+@app.route('/', defaults={'path':''})
+def serve_frontend(path):
+    return send_from_directory(app.static_folder, 'index.html')
+
+if __name__=='__main__':
+    if USE_TLS and os.path.exists(TLS_CERT) and os.path.exists(TLS_KEY):
+        app.run(host='0.0.0.0', port=5000, ssl_context=(TLS_CERT, TLS_KEY))
+    else:
+        app.run(host='0.0.0.0', port=5000)

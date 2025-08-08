@@ -1,0 +1,40 @@
+import React, {useState, useEffect} from 'react'
+import axios from 'axios'
+const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000'
+const TOKEN = process.env.REACT_APP_API_TOKEN || 'change_me_to_a_strong_token'
+axios.defaults.baseURL = API_BASE
+axios.defaults.headers.common['Authorization'] = `Bearer ${TOKEN}`
+export default function App(){
+  const [cidrs,setCidrs]=useState('192.168.1.0/28')
+  const [discoverResult,setDiscoverResult]=useState(null)
+  const [targets,setTargets]=useState([])
+  const [password,setPassword]=useState('')
+  const [profiles,setProfiles]=useState({})
+  useEffect(()=>{fetchProfiles()},[])
+  async function fetchProfiles(){try{const r=await axios.get('/api/profiles'); setProfiles(r.data)}catch(e){}}
+  async function scan(){setDiscoverResult(null); const cidrList=cidrs.split(/\n|,|;/).map(s=>s.trim()).filter(Boolean); try{const r=await axios.post('/api/discover',{cidrs:cidrList,timeout:0.6}); setDiscoverResult(r.data)}catch(e){setDiscoverResult({error:String(e)})}}
+  function addAllAlive(){ if(!discoverResult) return; const alive=Object.keys(discoverResult.alive||{}); setTargets(prev=>Array.from(new Set(prev.concat(alive)))) }
+  async function startReset(){ try{ const r=await axios.post('/api/reset',{targets,method:'auto',password,model:''}); alert(JSON.stringify(r.data)); }catch(e){alert(String(e))} }
+  return (<div style={{fontFamily:'Arial',maxWidth:900,margin:'20px auto'}}>
+    <h1>FRITZ Mass Reset</h1>
+    <div style={{display:'flex',gap:20}}>
+      <div style={{flex:1}}>
+        <h3>Discover</h3>
+        <textarea rows={3} style={{width:'100%'}} value={cidrs} onChange={e=>setCidrs(e.target.value)} />
+        <div style={{marginTop:8}}>
+          <button onClick={scan}>Scan</button>
+          <button onClick={addAllAlive} style={{marginLeft:8}}>Add Alive</button>
+        </div>
+        <pre style={{background:'#222',color:'#fff',padding:8,marginTop:8}}>{discoverResult?JSON.stringify(discoverResult,null,2):'Scan results here'}</pre>
+      </div>
+      <div style={{flex:1}}>
+        <h3>Reset</h3>
+        <textarea rows={6} style={{width:'100%'}} value={targets.join('\n')} onChange={e=>setTargets(e.target.value.split(/\n/).map(s=>s.trim()).filter(Boolean))} />
+        <div style={{marginTop:8}}>
+          <input placeholder="Admin password" type="password" value={password} onChange={e=>setPassword(e.target.value)} />
+          <button onClick={startReset} style={{marginLeft:8}}>Start Reset</button>
+        </div>
+      </div>
+    </div>
+  </div>)
+}

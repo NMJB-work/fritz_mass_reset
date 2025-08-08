@@ -1,0 +1,7 @@
+{
+  "FRITZ_7590": {
+    "login_field": "pw",
+    "backup_path": "/cgi-bin/system_backup.lua",
+    "factory_button_xpath": "//button[contains(., 'Werkseinstellungen') or contains(., 'Factory')]"
+  }
+}

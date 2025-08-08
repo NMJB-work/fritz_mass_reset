@@ -1,0 +1,124 @@
+import json, os, time, traceback
+from urllib.parse import urljoin
+from fritzconnection import FritzConnection, FritzConnectionException
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from settings import SELENIUM_URL, SELECTOR_PROFILES_FILE
+
+class SelectorProfiles:
+    def __init__(self, path=SELECTOR_PROFILES_FILE):
+        self.path = path
+        if os.path.exists(path):
+            try:
+                with open(path,'r') as f:
+                    self.profiles = json.load(f)
+            except Exception:
+                self.profiles = {}
+        else:
+            self.profiles = {}
+    def save(self):
+        with open(self.path,'w') as f:
+            json.dump(self.profiles,f,indent=2)
+    def get(self, model):
+        return self.profiles.get(model)
+    def set(self, model, profile):
+        self.profiles[model]=profile
+        self.save()
+
+profiles = SelectorProfiles()
+
+def _tcp_check(address, port=80, timeout=1.0):
+    import socket
+    s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    s.settimeout(timeout)
+    try:
+        s.connect((address, port)); s.close(); return True
+    except Exception:
+        return False
+
+class TR064Resetter:
+    def __init__(self, address, username=None, password=None, timeout=6):
+        self.address=address; self.username=username; self.password=password; self.timeout=timeout
+    def reset(self):
+        try:
+            fc = FritzConnection(address=self.address, user=self.username, password=self.password, timeout=self.timeout)
+        except Exception as e:
+            return False, f'TR-064 connect failed: {e}'
+        try:
+            fc.call_http('loadfactorydefaults')
+            return True, 'TR-064: loadfactorydefaults invoked'
+        except Exception as e:
+            return False, f'TR-064 call failed: {e}'
+
+class RemoteSeleniumResetter:
+    def __init__(self, address, password=None, headless=True, selenium_url=None, model=None, timeout=30):
+        self.address=address; self.password=password; self.headless=headless; self.selenium_url=selenium_url or SELENIUM_URL; self.model=model; self.timeout=timeout
+    def _make_driver(self):
+        caps = DesiredCapabilities.CHROME.copy()
+        driver = webdriver.Remote(command_executor=self.selenium_url, desired_capabilities=caps)
+        driver.set_page_load_timeout(self.timeout)
+        return driver
+    def reset(self):
+        driver=None
+        try:
+            driver = self._make_driver()
+            base = f'http://{self.address}'
+            driver.get(base)
+            time.sleep(0.5)
+            profile = profiles.get(self.model) if self.model else None
+            if profile:
+                try:
+                    el = driver.find_element(By.NAME, profile.get('login_field','pw'))
+                    if self.password is None:
+                        return False, 'Password required for web UI but not provided.'
+                    el.send_keys(self.password); el.submit(); time.sleep(1.0)
+                except Exception:
+                    pass
+                if profile.get('backup_path'):
+                    driver.get(urljoin(base, profile['backup_path'])); time.sleep(0.6)
+                xpath = profile.get('factory_button_xpath')
+                if xpath:
+                    try:
+                        btn = driver.find_element(By.XPATH, xpath); btn.click(); time.sleep(0.3)
+                        try:
+                            alert = driver.switch_to.alert; alert.accept()
+                        except Exception:
+                            pass
+                        return True, f'Selenium (profile {self.model}): factory reset initiated'
+                    except Exception as e:
+                        return False, f'Profile present but clicking factory button failed: {e}'
+            # heuristics
+            tried_paths = ['/cgi-bin/system_backup.lua','/cgi-bin/system_backup','/system/backup.lua','/cgi-bin/backup.lua']
+            for p in tried_paths:
+                try:
+                    driver.get(base+p); time.sleep(0.4)
+                    if 'factory' in driver.page_source.lower() or 'werkseinst' in driver.page_source.lower():
+                        break
+                except Exception:
+                    continue
+            btn=None
+            try:
+                elems = driver.find_elements(By.XPATH, "//button|//input[@type='button']|//a")
+                for e in elems:
+                    txt = (e.text or e.get_attribute('value') or '').lower()
+                    if 'factory' in txt or 'werkseinst' in txt:
+                        btn=e; break
+            except Exception:
+                pass
+            if not btn:
+                return False, 'Could not locate factory-reset UI elements. Provide selector profile.'
+            btn.click(); time.sleep(0.2)
+            try:
+                alert = driver.switch_to.alert; alert.accept()
+            except Exception:
+                pass
+            if 'press a button' in driver.page_source.lower() or 'press the button' in driver.page_source.lower():
+                return False, 'UI asks for physical button press on device to confirm factory reset.'
+            return True, 'Selenium heuristic: factory reset initiated'
+        except Exception as e:
+            return False, f'Selenium error: {e} - {traceback.format_exc()}'
+        finally:
+            if driver:
+                try: driver.quit()
+                except Exception: pass

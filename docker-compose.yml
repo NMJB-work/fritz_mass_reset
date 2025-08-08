@@ -1,0 +1,32 @@
+version: '3.8'
+services:
+  backend:
+    build: ./backend
+    ports:
+      - '5000:5000'
+    environment:
+      - API_TOKEN=change_me_to_a_strong_token
+      - SELENIUM_URL=http://selenium:4444/wd/hub
+      - USE_TLS=false
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./backend/data:/app/data
+    depends_on:
+      - selenium
+      - redis
+  frontend:
+    build: ./frontend
+    ports:
+      - '3000:3000'
+    environment:
+      - REACT_APP_API_BASE=http://localhost:5000
+      - REACT_APP_API_TOKEN=change_me_to_a_strong_token
+  selenium:
+    image: selenium/standalone-chrome:115.0
+    shm_size: '2gb'
+    ports:
+      - '4444:4444'
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
