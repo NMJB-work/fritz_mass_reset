@@ -3,7 +3,7 @@
 This archive contains a Dockerized backend, frontend, Selenium container, and Redis queue for managing mass FRITZ!Box resets.
 
 ## Quick start
-1. Install git:
+1. Install git:  
    Ubuntu/Debian
    ```bash
    sudo apt update && sudo apt upgrade -y && sudo apt install git && sudo apt install curl
@@ -12,9 +12,10 @@ This archive contains a Dockerized backend, frontend, Selenium container, and Re
    ```bash
    sudo dnf update -y && sudo dnf upgrade -y && sudo dnf install git && sudo apt install curl
    ```
-2. Install docker and docker compose:
-   Docker: https://docs.docker.com/engine/install/
-   Docker compose: https://docs.docker.com/desktop/setup/install/linux/
+2. Install docker and docker compose:  
+   Docker: https://docs.docker.com/engine/install/  
+   Docker compose: https://docs.docker.com/desktop/setup/install/linux/  
+
 4. Clone this Repo:
    ```bash
    git clone https://github.com/NMJB-work/fritz_mass_reset.git && cd fritz_mass_reset
